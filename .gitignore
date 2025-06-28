@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Environment
+.env
+.venv/
+env/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data
+data/
+*.h5ad
+*.mtx
+*.tsv
+*.csv
+
+# VS Code
+.vscode/
+
+# Logs and misc
+*.log
+*.tmp
+.git_backup/
