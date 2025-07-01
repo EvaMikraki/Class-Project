@@ -23,7 +23,7 @@ class ScPredModel:
 
     def train(self, ref_adata, cell_type_key, n_components=30, 
               hvg_min_mean=0.0125, hvg_max_mean=3, hvg_min_disp=0.5, hvg_n_top_genes=None, hvg_flavor='seurat',
-              svm_kernel='linear', svm_c=1.0, svm_random_state=42,
+              svm_kernel='linear', svm_c=1.0, svm_random_state=42, class_weight=None,
               perform_preprocessing=True):
         """
         Trains the scPred model on reference data.
@@ -90,7 +90,7 @@ class ScPredModel:
         self.classifier_ = _training.train_svm(
             X_pca, labels, 
             kernel=svm_kernel, c=svm_c, random_state=svm_random_state,
-            class_weight='balanced' # FIX: Add class_weight='balanced' here
+            class_weight=class_weight # FIX: Add class_weight='balanced' here
         )
         print("--- ScPred Training Complete ---")
 
