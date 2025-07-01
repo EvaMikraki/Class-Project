@@ -10,3 +10,4 @@ scikit_learn==1.7.0
 scipy
 seaborn==0.13.2
 statsmodels==0.14.4
+tabulate
