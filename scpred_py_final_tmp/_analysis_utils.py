@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import scanpy as sc # Still needed for AnnData context within comments/docstrings if any remain
 from sklearn.metrics import (
     classification_report,
     balanced_accuracy_score,
@@ -9,7 +8,7 @@ from sklearn.metrics import (
     roc_curve,
     auc,
 )
-from sklearn.preprocessing import LabelBinarizer # Useful for consistent binary labels for ROC AUC
+from sklearn.preprocessing import LabelBinarizer
 
 
 def evaluate_and_report_metrics(true_labels, predicted_labels, classifier_classes=None, y_pred_probs=None):
@@ -88,60 +87,57 @@ def evaluate_and_report_metrics(true_labels, predicted_labels, classifier_classe
         # This is crucial for ROC AUC calculation.
         y_pred_probs_filtered = y_pred_probs.loc[valid_prediction_mask].copy()
 
+        # Ensure that y_pred_probs columns match classifier_classes order for consistent indexing
+        class_to_prob_col = {str(c): f"scpred_prob_{c}" for c in classifier_classes}
+
         y_scores_ordered = []
         target_classes_for_roc = []
 
         for class_label in classifier_classes:
             class_label_str = str(class_label)
-            # CORRECTED: Probability column name includes 'scpred_prob_' prefix
-            prob_col_name_in_df = f"scpred_prob_{class_label_str}" 
+            prob_col_name = class_to_prob_col[class_label_str]
             
-            if prob_col_name_in_df in y_pred_probs_filtered.columns:
+            if prob_col_name in y_pred_probs_filtered.columns:
                 # Check if the probability column itself contains NaNs after filtering
-                if y_pred_probs_filtered[prob_col_name_in_df].isna().any():
+                # This should ideally not happen if valid_prediction_mask works correctly, but as a safeguard
+                if y_pred_probs_filtered[prob_col_name].isna().any():
                     print(f"Skipping ROC plot for Class {class_label_str}: NaN probabilities detected after filtering. All values are NaN.")
                     roc_auc_scores[class_label_str] = np.nan
                     continue # Skip to next class
 
-                y_scores_ordered.append(y_pred_probs_filtered[prob_col_name_in_df])
+                y_scores_ordered.append(y_pred_probs_filtered[prob_col_name])
                 target_classes_for_roc.append(class_label_str)
             else:
-                print(f"Warning: Probability column '{prob_col_name_in_df}' not found for class '{class_label_str}'. Skipping ROC for this class.")
+                print(f"Warning: Probability column '{prob_col_name}' not found for class '{class_label_str}'. Skipping ROC for this class.")
                 roc_auc_scores[class_label_str] = np.nan
         
         if len(y_scores_ordered) > 0:
-            # Check if y_true_binary can be created from filtered_true_labels_all
-            # Only proceed if there are enough samples and diverse labels
-            unique_true_labels_filtered = filtered_true_labels_all.unique()
-            if len(unique_true_labels_filtered) > 1: # Need at least two unique labels for ROC
-                # Binarize true labels, ensuring consistent order of classes for ROC
-                label_binarizer = LabelBinarizer()
-                # Fit on the actual target_classes_for_roc, as these are the ones we have scores for
-                label_binarizer.fit(target_classes_for_roc) 
-                
-                # Use the filtered true labels that correspond to the valid probabilities
-                y_true_binary = label_binarizer.transform(filtered_true_labels_all)
-                y_scores_ordered_array = np.array(y_scores_ordered).T # Transpose to (n_samples, n_classes)
+            y_scores_ordered_array = np.array(y_scores_ordered).T # Transpose to (n_samples, n_classes)
 
-                for i, class_label_str in enumerate(target_classes_for_roc):
-                    # Check if there's at least one positive and one negative sample for ROC AUC
-                    # within the filtered set of labels for the current class
-                    if y_true_binary.shape[1] > i and len(np.unique(y_true_binary[:, i])) > 1:
-                        # Ensure y_score for roc_curve is a 1D array
-                        fpr, tpr, _ = roc_curve(y_true_binary[:, i], y_scores_ordered_array[:, i])
-                        roc_auc = auc(fpr, tpr)
-                        roc_auc_scores[class_label_str] = roc_auc
-                    else:
-                        print(f"Skipping ROC plot for Class {class_label_str}: Not enough unique true labels after filtering for ROC.")
-                        roc_auc_scores[class_label_str] = np.nan # Class not found or only one label in binary target
-                
-                print("Per-class ROC AUC scores:")
-                for label, score in roc_auc_scores.items():
-                    print(f"  Class {label}: {score:.4f}")
-                metrics_results['roc_auc_scores'] = roc_auc_scores
-            else:
-                print("Not enough diverse true labels to compute ROC AUC for any class after filtering.")
-                metrics_results['roc_auc_scores'] = {} # No ROC AUC scores
+            # Binarize true labels, ensuring consistent order of classes for ROC
+            label_binarizer = LabelBinarizer()
+            # Fit on the actual target_classes_for_roc, as these are the ones we have scores for
+            label_binarizer.fit(target_classes_for_roc) 
+            
+            # Use the filtered true labels that correspond to the valid probabilities
+            y_true_binary = label_binarizer.transform(filtered_true_labels_all)
+
+            for i, class_label_str in enumerate(target_classes_for_roc):
+                # Check if there's at least one positive and one negative sample for ROC AUC
+                # within the filtered set of labels for the current class
+                if y_true_binary.shape[1] > i and len(np.unique(y_true_binary[:, i])) > 1:
+                    # Ensure y_score for roc_curve is a 1D array
+                    fpr, tpr, _ = roc_curve(y_true_binary[:, i], y_scores_ordered_array[:, i])
+                    roc_auc = auc(fpr, tpr)
+                    roc_auc_scores[class_label_str] = roc_auc
+                else:
+                    print(f"Skipping ROC plot for Class {class_label_str}: Not enough unique true labels after filtering for ROC.")
+                    roc_auc_scores[class_label_str] = np.nan # Class not found or only one label in binary target
+            
+            print("Per-class ROC AUC scores:")
+            for label, score in roc_auc_scores.items():
+                print(f"  Class {label}: {score:.4f}")
+            metrics_results['roc_auc_scores'] = roc_auc_scores
         else:
             print("No valid probability columns found to compute ROC AUC after filtering.")
     else:

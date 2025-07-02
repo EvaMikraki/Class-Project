@@ -1,4 +1,4 @@
-# __init__.py: # Makes 'scpred_py' a package and can expose key functions/classes.
+# Makes 'scpred_py' a package and can expose key functions/classes.
 # For now, we'll import our main class.
 
 """

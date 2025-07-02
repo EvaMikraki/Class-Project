@@ -6,7 +6,6 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC # Import SVC for kernel flexibility
 import pickle # For saving/loading the model
-import numpy as np # Import numpy for pd.CategoricalDtype
 
 
 class ScPredModel:
@@ -152,26 +151,23 @@ class ScPredModel:
         # 4. Project scaled query data onto the *existing PCA space*
         X_projected = _preprocessing.transform_data_with_pca(X_scaled_query, self.pca_model_)
 
-        # 5. Predict cell types and probabilities, now passing the threshold and obs_names
-        # Pass aligned_query_adata.obs_names to ensure correct indexing in _prediction.py
-        labels_series, probs_df = _prediction.predict_cells(X_projected, self.classifier_, aligned_query_adata.obs_names, threshold=threshold)
+        # 5. Predict cell types and probabilities, now passing the threshold
+        labels_series, probs_df = _prediction.predict_cells(X_projected, self.classifier_, threshold=threshold)
 
         # 6. Add results back to the original query_adata object
-        
-        # Get all unique categories from the classifier's classes and the predicted labels (including 'unassigned')
-        # This ensures 'unassigned' is a valid category and prevents NaN coercion.
-        all_possible_categories = sorted(list(set(self.classifier_.classes_).union(set(labels_series.unique()))))
-
-        # labels_series already has the correct index from _prediction.predict_cells (aligned_query_adata.obs_names)
-        # Reindex to original query_adata.obs_names to fill NaNs for any filtered cells, then set as categorical
-        query_adata.obs['scpred_prediction'] = labels_series.reindex(query_adata.obs_names).astype(pd.CategoricalDtype(categories=all_possible_categories))
+        # Use the labels_series (which now includes 'unassigned') directly
+        query_adata.obs['scpred_prediction'] = labels_series.reindex(query_adata.obs_names).astype('category')
         
         # Add probability columns
         if probs_df is not None:
-            # probs_df already has the correct index from _prediction.predict_cells (aligned_query_adata.obs_names)
-            # Reindex to original query_adata.obs_names to fill NaNs for any filtered cells
-            for col in probs_df.columns:
-                query_adata.obs[f"scpred_prob_{col}"] = probs_df[col].reindex(query_adata.obs_names)
+            # Reindex probabilities to match the original query_adata index, then assign
+            # This handles potential filtering of cells during preprocessing if any occurred
+            prob_df_for_reindex = probs_df.copy() # Already has correct index from _prediction.predict_cells
+            
+            # Ensure 'unassigned' is not a column in probs_df if it was added as a label
+            # This is handled by _prediction.predict_cells returning probs_df with original classes
+            for col in prob_df_for_reindex.columns:
+                query_adata.obs[f"scpred_prob_{col}"] = prob_df_for_reindex[col].reindex(query_adata.obs_names)
 
         # Store the projected PCs in .obsm.
         # Ensure correct indexing and reindexing if cells were filtered during preprocessing.
