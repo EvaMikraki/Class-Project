@@ -1,3 +1,5 @@
+# _preprocessing.py:
+
 import scanpy as sc
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -186,18 +188,19 @@ def align_genes_to_reference(adata_to_align, reference_gene_names):
     # Genes in `expr_df` but not in `reference_gene_names` will be dropped.
     aligned_expr_df = expr_df.reindex(columns=reference_gene_names, fill_value=0.0)
 
-    # Safety check: Ensure the number of features matches
+    # Informative messages about gene alignment
+    num_missing_in_query = len(set(reference_gene_names) - set(adata_to_align.var_names))
+    if num_missing_in_query > 0:
+        print(f"  Note: {num_missing_in_query} reference genes were missing in the query data and filled with zeros.")
+    
+    num_extra_in_query = len(set(adata_to_align.var_names) - set(reference_gene_names))
+    if num_extra_in_query > 0:
+        print(f"  Note: {num_extra_in_query} query genes were not in the reference and were dropped.")
+
     if aligned_expr_df.shape[1] == 0 and len(reference_gene_names) > 0:
         raise ValueError(f"Gene alignment resulted in 0 features for data with {len(reference_gene_names)} reference genes. "
                          "This indicates no common genes were found. Check gene names consistency.")
-    elif aligned_expr_df.shape[1] != len(reference_gene_names):
-        # This warning might still occur if some reference genes are not found in query,
-        # but align_genes_to_reference should handle this by filling with 0.
-        # This specific check might be redundant if reindex handles it implicitly.
-        print(f"Warning: Aligned data has {aligned_expr_df.shape[1]} features, "
-              f"but reference genes expect {len(reference_gene_names)}. This means some reference genes were missing in query and filled with 0, or vice versa.")
-
-
+    
     # Create a new AnnData object from the aligned DataFrame
     aligned_adata = ad.AnnData(
         X=aligned_expr_df.values,

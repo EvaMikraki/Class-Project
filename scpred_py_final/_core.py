@@ -1,3 +1,5 @@
+# _core.py:
+
 import anndata as ad
 import pandas as pd
 import scanpy as sc
@@ -44,13 +46,13 @@ class ScPredModel:
             svm_c (float): Regularization parameter for SVM.
             svm_random_state (int): Random state for SVM for reproducibility.
             svm_class_weight (str or dict, optional): Weights associated with classes for SVM.
-                                                      If 'balanced', class weights will be
-                                                      inversely proportional to class frequencies.
-                                                      Defaults to None.
+                                                    If 'balanced', class weights will be
+                                                    inversely proportional to class frequencies.
+                                                    Defaults to None.
             perform_preprocessing (bool): If True, model performs initial filtering, normalization,
-                                          log1p, and HVG selection. If False, assumes ref_adata
-                                          is already normalized, log1p-transformed, and HVG-selected.
-                                          Scaling and PCA are *always* performed internally.
+                                            log1p, and HVG selection. If False, assumes ref_adata
+                                            is already normalized, log1p-transformed, and HVG-selected.
+                                            Scaling and PCA are *always* performed internally.
         """
         _utils.check_adata(ref_adata)
         if cell_type_key not in ref_adata.obs:
@@ -105,14 +107,14 @@ class ScPredModel:
 
         Args:
             query_adata (ad.AnnData): Query AnnData object. Expected raw counts if perform_preprocessing=True,
-                                      else expected to be normalized, log1p, and aligned to reference HVGs.
+                                        else expected to be normalized, log1p, and aligned to reference HVGs.
             threshold (float): Minimum probability for a prediction.
-                               Predictions below this could be "unassigned" (future feature).
+                                Predictions below this could be "unassigned" (future feature).
             perform_preprocessing (bool): If True, model performs initial filtering, normalization,
-                                          log1p, and gene alignment to reference HVGs. If False,
-                                          assumes query_adata is already normalized, log1p-transformed,
-                                          and aligned to reference HVGs.
-                                          Scaling and PCA transformation are *always* performed internally.
+                                            log1p, and gene alignment to reference HVGs. If False,
+                                            assumes query_adata is already normalized, log1p-transformed,
+                                            and aligned to reference HVGs.
+                                            Scaling and PCA transformation are *always* performed internally.
         Returns:
             ad.AnnData: Query AnnData object with prediction results added.
         """
@@ -140,11 +142,15 @@ class ScPredModel:
             if 'log1p' not in aligned_query_adata.uns:
                 print("  Warning: `perform_preprocessing` is False, but `adata.uns['log1p']` not found in query data. "
                       "  Ensure data is indeed log-transformed if required by your pipeline.")
-            # The gene count mismatch warning is already there, which is good:
+            
+            # Additional check: If gene count mismatch, warn the user.
+            # This is specifically for when preprocessing is skipped, as align_genes_to_reference handles it otherwise.
             if aligned_query_adata.shape[1] != len(self.reference_hvg_genes_):
-                 print("  Warning: `perform_preprocessing` is False, but query_adata gene count doesn't match reference HVGs. "
-                       "  Ensure query_adata is aligned to reference HVGs before passing.")
-
+                print("  Warning: `perform_preprocessing` is False, but query_adata gene count doesn't match reference HVGs. "
+                      "  Ensure query_adata is aligned to reference HVGs before passing. Attempting to align genes anyway.")
+                aligned_query_adata = _preprocessing.align_genes_to_reference(
+                    aligned_query_adata, self.reference_hvg_genes_
+                )
 
         # 3. Scale query data using the *fitted reference scaler*
         X_scaled_query = _preprocessing.transform_data_with_scaler(aligned_query_adata, self.scaler_)
@@ -174,12 +180,14 @@ class ScPredModel:
                 query_adata.obs[f"scpred_prob_{col}"] = probs_df[col].reindex(query_adata.obs_names)
 
         # Store the projected PCs in .obsm.
-        # Ensure correct indexing and reindexing if cells were filtered during preprocessing.
-        if X_projected.shape[0] == aligned_query_adata.shape[0]:
-            pca_df_for_reindex = pd.DataFrame(X_projected, index=aligned_query_adata.obs_names)
-            query_adata.obsm['X_scpred_pca'] = pca_df_for_reindex.reindex(query_adata.obs_names).values
-        else:
-            print("  Warning: Number of projected cells does not match aligned query data. X_scpred_pca not stored in .obsm.")
+        # Create a DataFrame for projected PCs, using the indices of the *aligned* data
+        pca_df = pd.DataFrame(X_projected, index=aligned_query_adata.obs_names, 
+                              columns=[f'PC_{i+1}' for i in range(X_projected.shape[1])])
+        
+        # Reindex to the *original* query_adata.obs_names. Cells filtered out during
+        # initial_preprocessing_steps will correctly get NaNs.
+        query_adata.obsm['X_scpred_pca'] = pca_df.reindex(query_adata.obs_names).values
+        print("Projected PCs stored in query_adata.obsm['X_scpred_pca']. Cells filtered during preprocessing will have NaN values.")
 
         print("--- ScPred Prediction Complete ---")
         return query_adata
