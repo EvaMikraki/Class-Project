@@ -22,13 +22,13 @@ The repository structure on GitHub is as follows:
 ```
 .
 ├── models/
-│   ├── scpred_model_paul15_optimal.pkl   # Saved optimal model for Paul15
-│   └── scpred_model_pbmc3k_optimal.pkl   # Saved optimal model for pbmc3k
+│   ├── scpred_model_paul15.pkl   # Saved model for Paul15
+│   └── scpred_model_pbmc3k.pkl   # Saved model for pbmc3k
 ├── notebooks/
-│   ├── 01_comparative_analysis_pbmc3k.ipynb  # Notebook for hyperparameter exploration on pbmc3k
-│   ├── 02_comparative_analysis_paul15.ipynb  # Notebook for hyperparameter exploration on Paul15
-│   ├── 03_final_analysis_pbmc3k.ipynb        # Notebook for final analysis and plotting on pbmc3k
-│   └── 04_final_analysis_paul15.ipynb        # Notebook for final analysis and plotting on Paul15
+│   ├── 01_pbmc3k_hyperparameter_exploration.ipynb  # Notebook for hyperparameter exploration on pbmc3k
+│   ├── 02_paul15_hyperparameter_exploration.ipynb  # Notebook for hyperparameter exploration on Paul15
+│   ├── 03_pbmc3k_analysis.ipynb        # Notebook for analysis and plotting on pbmc3k
+│   └── 04_paul15_analysis.ipynb        # Notebook for analysis and plotting on Paul15
 ├── scpred_py/                  # The core scpred-py package
 │   ├── __init__.py
 │   ├── _analysis_utils.py      # Utility functions for evaluation and reporting
@@ -82,22 +82,22 @@ The project's analysis and results can be reproduced by running the Jupyter note
 
 ### Notebooks Overview:
 
-The notebooks are designed to be self-contained for clarity and reproducibility. Each final analysis notebook (03 and 04) includes its own data loading, preprocessing and model training steps, ensuring consistency regardless of the order in which notebooks are run.
+The notebooks are designed to be self-contained for clarity and reproducibility. Each notebook includes its own data loading, preprocessing and model training steps, ensuring consistency regardless of the order in which notebooks are run.
 
-* **`01_comparative_analysis_pbmc3k.ipynb`**: This notebook facilitates the exploration of hyperparameter combinations for the pbmc3k dataset. It utilizes the `run_scpred_experiment` function to systematically train models across 32 different parameter settings. The primary purpose of this notebook is to observe how the model performs under various configurations and to inform the manual selection of optimal hyperparameters, which are then applied in the final analysis notebooks. The models trained in this notebook are *not* saved.
-* **`02_comparative_analysis_paul15.ipynb`**: Similar to the pbmc3k notebook, this one performs hyperparameter exploration for the Paul15 dataset, running 32 experiments to assess model performance across different parameter settings. The models trained here are also *not* saved, serving solely for comparative analysis to guide optimal parameter selection.
-* **`03_final_analysis_pbmc3k.ipynb`**: This notebook contains the complete pipeline for the pbmc3k dataset. It loads the raw data, performs preprocessing, trains the `scpred-py` model with the *manually selected optimal hyperparameters* and then applies the model to the query data. It automates the evaluation and plotting processes using the `run_scenario` and `plot_results_comprehensive` functions, presenting classification results for both no-threshold (0.0) and optimal threshold (0.8) scenarios. The optimal `ScPredModel` for pbmc3k is saved as `scpred_model_pbmc3k_optimal.pkl` in the `models/` directory upon completion.
-* **`04_final_analysis_paul15.ipynb`**: This notebook provides the complete pipeline for the Paul15 dataset. It loads data, preprocesses, trains the `scpred-py` model with its *manually selected optimal hyperparameters* and evaluates predictions for no-threshold (0.0) and optimal threshold (0.6) scenarios. It also leverages the `run_scenario` and `plot_results_comprehensive` functions for automated evaluation and visualization. The optimal `ScPredModel` for Paul15 is saved as `scpred_model_paul15_optimal.pkl` in the `models/` directory upon completion.
+* **`01_pbmc3k_hyperparameter_exploration.ipynb`**: This notebook facilitates the exploration of hyperparameter combinations for the pbmc3k dataset. It utilizes the `run_scpred_experiment` function to systematically train models across 32 different parameter settings. The primary purpose of this notebook is to observe how the model behaves under various configurations and to inform the manual selection of empirically chosen hyperparameters, which are then applied in the analysis notebooks. The models trained in this notebook are *not* saved.
+* **`02_paul15_hyperparameter_exploration.ipynb`**: Similar to the pbmc3k notebook, this one performs hyperparameter exploration for the Paul15 dataset, running 32 experiments to assess model behavior across different parameter settings. The models trained here are also *not* saved, serving solely for empirical analysis to guide hyperparameter selection.
+* **`03_pbmc3k_analysis.ipynb`**: This notebook contains the complete pipeline for the pbmc3k dataset. It loads the raw data, performs preprocessing, trains the `scpred-py` model with the *empirically selected hyperparameters* and then applies the model to the query data. It automates the evaluation and plotting processes using the `run_scenario` and `plot_results_comprehensive` functions, presenting the classification results for both no-threshold (0.0) and selected threshold (0.8) scenarios. The `ScPredModel` for pbmc3k is saved as `scpred_model_pbmc3k.pkl` in the `models/` directory upon completion.
+* **`04_paul15_analysis.ipynb`**: This notebook provides the complete pipeline for the Paul15 dataset. It loads data, preprocesses, trains the `scpred-py` model with its *empirically selected hyperparameters* and evaluates predictions for no-threshold (0.0) and selected threshold (0.6) scenarios. It also leverages the `run_scenario` and `plot_results_comprehensive` functions for automated evaluation and visualization. The `ScPredModel` for Paul15 is saved as `scpred_model_paul15.pkl` in the `models/` directory upon completion.
 
-**Experimenting with Thresholds:** The `run_scenario` function, used in the `03_final_analysis_pbmc3k.ipynb` and `04_final_analysis_paul15.ipynb` notebooks, is designed to facilitate easy experimentation with different prediction confidence thresholds. Users can modify the `threshold` parameter within the `run_scenario` calls to observe its impact on classification results and visualizations in an automated manner.
+**Experimenting with Thresholds:** The `run_scenario` function, used in the `03_pbmc3k_analysis.ipynb` and `04_paul15_analysis.ipynb` notebooks, is designed to facilitate easy experimentation with different prediction confidence thresholds. Users can modify the `threshold` parameter within the `run_scenario` calls to observe its impact on classification results and visualizations in an automated manner.
 
 ## Core Package (`scpred_py/`)
 
 The `scpred_py/` directory contains the source code for the `scpred-py` package.
 * `_core.py`: Defines the `ScPredModel` class, which orchestrates the training and prediction workflows. It includes the `perform_preprocessing` flag for flexible data handling.
-* `_preprocessing.py`: Contains functions for initial data preprocessing (filtering, normalization, log-transformation), highly variable gene selection, data scaling, PCA fitting, and gene alignment.
+* `_preprocessing.py`: Contains functions for initial data preprocessing (filtering, normalization, log-transformation), highly variable gene selection, data scaling, PCA fitting and gene alignment.
 * `_training.py`: Implements the SVM classifier training logic.
-* `_prediction.py`: Handles prediction, probability estimation, and confidence thresholding.
+* `_prediction.py`: Handles prediction, probability estimation and confidence thresholding.
 * `_analysis_utils.py`: Provides utilities for evaluating model performance and generating classification reports.
 
 ## License
