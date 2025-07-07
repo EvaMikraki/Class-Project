@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`scpred-py` is a Python package for supervised cell-type classification from single-cell RNA-sequencing (scRNA-seq) data. Inspired by the `scPred` R package by Alquicira-Hernandez et al. (2019), this project aims to provide a robust, modular, and user-friendly tool within the Python ecosystem. It implements a core classification pipeline encompassing data preprocessing, dimensionality reduction (PCA) and Support Vector Machine (SVM) classification, with a critical feature for confidence-based prediction thresholding.
+`scpred-py` is a Python package for supervised cell-type classification from single-cell RNA-sequencing (scRNA-seq) data. Inspired by the `scPred` R package by Alquicira-Hernandez et al. (2019), this project aims to provide a robust, modular and user-friendly tool within the Python ecosystem. It implements a core classification pipeline encompassing data preprocessing, dimensionality reduction (PCA) and Support Vector Machine (SVM) classification, with a critical feature for confidence-based prediction thresholding.
 
 This tool was developed as an ML class project, addressing challenges encountered during attempts to re-implement and extend the original R version, leading to a focus on building a consistently performing Python-native solution.
 
